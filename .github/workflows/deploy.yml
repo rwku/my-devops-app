@@ -12,59 +12,39 @@ env:
 jobs:
 
   test:
-
-    runs-on: ubuntu-latest
-
-    steps:
-
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-
-        with:
-          python-version: "3.11"
-
-      - name: Install Dependencies
-
-        run: |
-          pip install -r requirements.txt
-
-      - name: Run Test
-
-        run: |
-          pytest
+    ...
+    ...
 
   build:
-
     needs: test
+    ...
+    ...
+
+  deploy:
+    name: Deploy to Server
+
+    needs: build
 
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      packages: write
+    if: github.ref == 'refs/heads/main'
 
     steps:
-
-      - uses: actions/checkout@v4
-
-      - name: Login GHCR
-
-        uses: docker/login-action@v3
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
 
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Build Docker Image
+          script: |
+            cd /opt/my-devops-app
 
-        run: |
-          docker build -t ghcr.io/${{ github.repository }}:latest .
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push Docker Image
+            docker compose pull
 
-        run: |
-          docker push ghcr.io/${{ github.repository }}:latest
+            docker compose up -d
+
+            docker image prune -f
