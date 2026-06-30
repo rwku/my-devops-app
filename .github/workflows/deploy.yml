@@ -34,7 +34,7 @@ jobs:
       - name: Run Test
 
         run: |
-          python test_app.py
+          pytest
 
   build:
 
